@@ -82,14 +82,15 @@ define elixir_deps.ex
 	Code.eval_file("mix.exs");
 	Mix.Tasks.Local.Hex.run(["--force"]);
 	Application.ensure_all_started(:hex);
-	Hex.Utils.ensure_registry!();
-	deps = Mix.Dep.loaded([]);
-	deps = List.foldl(deps, [], fn(%Mix.Dep{app: name, opts: opts, requirement: _ver, scm: scm}, acc) ->
+	Mix.Task.run("deps.get");
+	Hex.start;
+	Hex.Registry.Server.open();
+	deps = Mix.Dep.load_on_environment([]);
+	deps = List.foldl(deps, [], fn(%Mix.Dep{app: name, opts: opts, requirement: version, scm: scm}, acc) ->
 		only = Dict.get(opts, :only);
 		if Mix.env == only or only == nil do
 			case scm do
 				Elixir.Hex.SCM -> 
-				  version = Atom.to_string(name) |> Hex.Registry.get_versions |> List.last;
 				  [{name, "hex #{Regex.replace(~r/[^\.0-9]/, version, "")}"}|acc];
 				Elixir.Mix.SCM.Git -> [{name, "git #{Dict.get(opts, :git)} #{Dict.get(opts, :branch)}"}|acc];
 				_ -> acc;
