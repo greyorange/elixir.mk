@@ -91,7 +91,18 @@ define elixir_deps.ex
 		if Mix.env == only or only == nil do
 			case scm do
 				Elixir.Hex.SCM -> 
-				  [{name, "hex #{Regex.replace(~r/[^\.0-9]/, version, "")}"}|acc];
+					mod_vsn = case length(String.split(version, ".")) do 
+									2 -> version <> ".0";
+									_ -> version;
+								end;
+					final_vsn = case opts[:lock] do
+						nil -> mod_vsn;
+						lock -> case lock do
+									{:hex, _, vsn, _, _, _, _} -> vsn;
+									_ -> mod_vsn;
+								end;
+					end;
+					[{name, "hex #{Regex.replace(~r/[^\.0-9]/, final_vsn, "")}"}|acc];
 				Elixir.Mix.SCM.Git -> [{name, "git #{Dict.get(opts, :git)} #{Dict.get(opts, :branch)}"}|acc];
 				_ -> acc;
 			end;
@@ -152,4 +163,4 @@ $(DEPS_DIR)/elixir:
 	$(verbose) $(MAKE) -C $(DEPS_DIR)/elixir
 	$(call dep_verbose,hex) 
 	$(verbose) MIX_ENV=$(ELIXIR_MIX_ENV) $(ELIXIR_BIN)/elixir $(ELIXIR_BIN)/mix local.hex --force 2>&1 1>/dev/null
-
+	ln -s $(DEPS_DIR)/elixir/lib/elixir/ebin $(DEPS_DIR)/elixir/
